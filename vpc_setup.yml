@@ -1,4 +1,3 @@
----
 - hosts: localhost
   connection: local
   gather_facts: False
@@ -109,7 +108,9 @@
           - "{{ pubsub2_out.subnet.id }}"
           - "{{ pubsub3_out.subnet.id }}"
         routes:
-          - destination_cidr_block: 0.0.0.0/0
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ igw_out.gateway_id }}"
+          - dest: ::/0
             gateway_id: "{{ igw_out.gateway_id }}"
       register: pubRT_out
 
@@ -132,7 +133,7 @@
           - "{{ privsub2_out.subnet.id }}"
           - "{{ privsub3_out.subnet.id }}"
         routes:
-          - destination_cidr_block: 0.0.0.0/0
+          - dest: 0.0.0.0/0
             nat_gateway_id: "{{ NATGW_out.nat_gateway_id }}"
       register: privRT_out
 

@@ -33,3 +33,6 @@ elb_name: "vprofile-elb"
 
 # Tag for security groups
 sg_tag: "vprofile-sg"
+
+# S3 bucket name
+s3_bucket_name: "ansible_infrastructure_backup_bucket"
