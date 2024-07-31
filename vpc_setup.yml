@@ -3,20 +3,20 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/Vpc_setup
+    - vars/vpc_setup
 
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/Vpc_setup
+      include_vars: vars/vpc_setup
 
     - name: Create vprofile VPC
       amazon.aws.ec2_vpc_net:
         name: "{{ vpc_name }}"
         cidr_block: "{{ vpcCidr }}"
         region: "{{ region }}"
-        enable_dns_support: true
-        enable_dns_hostnames: true
-        instance_tenancy: default
+        dns_support: true
+        dns_hostnames: true
+        tenancy: default
         state: present
       register: vpcout
 
@@ -136,6 +136,15 @@
             nat_gateway_id: "{{ NATGW_out.nat_gateway_id }}"
       register: privRT_out
 
+    - name: Create S3 Bucket
+      amazon.aws.s3_bucket:
+        name: "{{ s3_bucket_name }}"
+        region: "{{ region }}"
+        state: present
+        tags:
+          Name: "{{ s3_bucket_name }}"
+      register: s3_bucket_out
+
     - name: Debug Information
       debug:
         var: item
@@ -151,6 +160,7 @@
         - pubRT_out.route_table.id
         - NATGW_out.nat_gateway_id
         - privRT_out.route_table.id
+        - s3_bucket_out.bucket.id
 
     - name: Set facts
       set_fact:
@@ -165,9 +175,10 @@
         pubRTid: "{{ pubRT_out.route_table.id }}"
         NATGWid: "{{ NATGW_out.nat_gateway_id }}"
         privRTid: "{{ privRT_out.route_table.id }}"
+        s3_bucket_id: "{{ s3_bucket_out.bucket.id }}"
         cacheable: yes
 
-    - name: Create variables file for VPC output
+    - name: Create variables file for VPC and S3 output
       copy:
         content: |
           vpcid: {{ vpcout.vpc.id }}
@@ -181,6 +192,7 @@
           pubRTid: {{ pubRT_out.route_table.id }}
           NATGWid: {{ NATGW_out.nat_gateway_id }}
           privRTid: {{ privRT_out.route_table.id }}
+          s3_bucket_id: {{ s3_bucket_out.bucket.id }}
         dest: vars/output_vars
 
     - name: Create security group for RDS
