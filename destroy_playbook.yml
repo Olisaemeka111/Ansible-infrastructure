@@ -1,115 +1,130 @@
+---
 - hosts: localhost
   connection: local
   gather_facts: False
   vars_files:
-    - vars/vpc_setup.yml
+    - vars/Vpc_setup
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/vpc_setup.yml
+      include_vars: vars/Vpc_setup
 
     - name: Delete RDS read replica
-      rds_instance:
+      amazon.aws.rds_instance:
         db_instance_identifier: "{{ rds_instance_identifier }}-replica"
         region: "{{ secondary_region }}"
         state: absent
+      when: rds_instance_identifier is defined
       ignore_errors: yes
 
     - name: Delete RDS instance
-      rds_instance:
+      amazon.aws.rds_instance:
         db_instance_identifier: "{{ rds_instance_identifier }}"
         region: "{{ region }}"
         state: absent
+      when: rds_instance_identifier is defined
       ignore_errors: yes
 
     - name: Delete RDS subnet group
-      rds_subnet_group:
+      amazon.aws.rds_subnet_group:
         name: "{{ rds_subnet_group }}"
         region: "{{ region }}"
         state: absent
+      when: rds_subnet_group is defined
       ignore_errors: yes
 
     - name: Delete ELB
-      elb:
+      amazon.aws.elb:
         name: "{{ elb_name }}"
         state: absent
         region: "{{ region }}"
+      when: elb_name is defined
       ignore_errors: yes
 
     - name: Delete S3 bucket
-      aws_s3_bucket:
+      amazon.aws.s3_bucket:
         name: "{{ s3_bucket_name }}"
-        state: absent
         region: "{{ region }}"
+        state: absent
+        force_delete: true
+      when: s3_bucket_name is defined
       ignore_errors: yes
 
     - name: Detach Internet Gateway
-      ec2_vpc_igw:
-        vpc_id: "{{ vpcout.vpc.id }}"
-        igw_id: "{{ igw_out.gateway_id }}"
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc_id }}"
+        igw_id: "{{ igw_id }}"
         region: "{{ region }}"
         state: detached
+      when: igw_id is defined and vpc_id is defined
       ignore_errors: yes
 
     - name: Delete Internet Gateway
-      ec2_vpc_igw:
-        vpc_id: "{{ vpcout.vpc.id }}"
-        igw_id: "{{ igw_out.gateway_id }}"
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc_id }}"
+        igw_id: "{{ igw_id }}"
         region: "{{ region }}"
         state: absent
+      when: igw_id is defined and vpc_id is defined
       ignore_errors: yes
 
     - name: Delete Public Subnets
-      ec2_vpc_subnet:
-        vpc_id: "{{ vpcout.vpc.id }}"
+      amazon.aws.ec2_vpc_subnet:
+        subnet_id: "{{ item }}"
         region: "{{ region }}"
         state: absent
       loop:
-        - "{{ pubsub1_out.subnet.id }}"
-        - "{{ pubsub2_out.subnet.id }}"
-        - "{{ pubsub3_out.subnet.id }}"
+        - "{{ pubsub1_id }}"
+        - "{{ pubsub2_id }}"
+        - "{{ pubsub3_id }}"
+      when: item is defined
       ignore_errors: yes
 
     - name: Delete Private Subnets
-      ec2_vpc_subnet:
-        vpc_id: "{{ vpcout.vpc.id }}"
+      amazon.aws.ec2_vpc_subnet:
+        subnet_id: "{{ item }}"
         region: "{{ region }}"
         state: absent
       loop:
-        - "{{ privsub1_out.subnet.id }}"
-        - "{{ privsub2_out.subnet.id }}"
-        - "{{ privsub3_out.subnet.id }}"
+        - "{{ privsub1_id }}"
+        - "{{ privsub2_id }}"
+        - "{{ privsub3_id }}"
+      when: item is defined
       ignore_errors: yes
 
     - name: Delete NAT Gateway
-      ec2_vpc_nat_gateway:
-        nat_gateway_id: "{{ NATGW_out.nat_gateway_id }}"
+      amazon.aws.ec2_vpc_nat_gateway:
+        nat_gateway_id: "{{ NATGW_id }}"
         state: absent
         region: "{{ region }}"
+      when: NATGW_id is defined
       ignore_errors: yes
 
     - name: Delete Route Tables
-      ec2_vpc_route_table:
-        vpc_id: "{{ vpcout.vpc.id }}"
+      amazon.aws.ec2_vpc_route_table:
+        route_table_id: "{{ item }}"
         region: "{{ region }}"
         state: absent
       loop:
-        - "{{ pubRT_out.route_table.id }}"
-        - "{{ privRT_out.route_table.id }}"
+        - "{{ pubRT_id }}"
+        - "{{ privRT_id }}"
+      when: item is defined
       ignore_errors: yes
 
     - name: Delete Security Groups
-      ec2_group:
-        name: "{{ item }}"
+      amazon.aws.ec2_group:
+        group_id: "{{ item }}"
         region: "{{ region }}"
         state: absent
       loop:
-        - "{{ rds_security_group_id }}"
-        - "{{ elb_security_group_id }}"
+        - "{{ rds_sg_id }}"
+        - "{{ elb_sg_id }}"
+      when: item is defined
       ignore_errors: yes
 
     - name: Delete VPC
-      ec2_vpc_net:
-        name: "{{ vpc_name }}"
+      amazon.aws.ec2_vpc_net:
+        vpc_id: "{{ vpc_id }}"
         region: "{{ region }}"
         state: absent
+      when: vpc_id is defined
       ignore_errors: yes
