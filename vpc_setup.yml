@@ -2,10 +2,10 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/vpc_setup.yml
+    - vars/vpc_setup
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/vpc_setup.yml
+      include_vars: vars/vpc_setup
 
     - name: Create vprofile VPC
       ec2_vpc_net:
@@ -230,28 +230,19 @@
       register: rds_replica_out
 
     - name: Create ELB
-      elb:
+      amazon.aws.elb_application_lb:
         name: "{{ elb_name }}"
         state: present
-        zones:
-          - "{{ zone1 }}"
-          - "{{ zone2 }}"
-          - "{{ zone3 }}"
-        security_group_ids:
+        subnets:
+          - "{{ pubsub1_out.subnet.id }}"
+          - "{{ pubsub2_out.subnet.id }}"
+          - "{{ pubsub3_out.subnet.id }}"
+        security_groups:
           - "{{ elb_sg_out.group_id }}"
         listeners:
           - protocol: http
-            load_balancer_port: 80
-            instance_protocol: http
-            instance_port: 80
-        health_check:
-          ping_protocol: http
-          ping_port: 80
-          ping_path: "/"
-          response_timeout: 5
-          interval: 30
-          unhealthy_threshold: 2
-          healthy_threshold: 2
+            port: 80
+            target_group_arn: "{{ target_group_arn }}"
         region: "{{ region }}"
       register: elb_out
 
