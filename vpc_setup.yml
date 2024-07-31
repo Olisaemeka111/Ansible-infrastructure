@@ -165,7 +165,7 @@
         - pubRT_out.route_table.id
         - NATGW_out.nat_gateway_id
         - privRT_out.route_table.id
-        - s3_bucket_out.bucket  # Adjusted based on debug output
+        - s3_bucket_out  # Use the entire object to check for correct attributes
 
     - name: Set facts
       set_fact:
@@ -180,7 +180,7 @@
         pubRTid: "{{ pubRT_out.route_table.id }}"
         NATGWid: "{{ NATGW_out.nat_gateway_id }}"
         privRTid: "{{ privRT_out.route_table.id }}"
-        s3_bucket_id: "{{ s3_bucket_out.bucket }}"  # Adjusted based on debug output
+        s3_bucket_id: "{{ s3_bucket_out.name }}"  # Adjusted based on debug output
         cacheable: yes
 
     - name: Create variables file for VPC and S3 output
@@ -197,7 +197,7 @@
           pubRTid: {{ pubRT_out.route_table.id }}
           NATGWid: {{ NATGW_out.nat_gateway_id }}
           privRTid: {{ privRT_out.route_table.id }}
-          s3_bucket_id: {{ s3_bucket_out.bucket }}  # Adjusted based on debug output
+          s3_bucket_id: {{ s3_bucket_out.name }}  # Adjusted based on debug output
         dest: vars/output_vars
 
     - name: Create security group for RDS
