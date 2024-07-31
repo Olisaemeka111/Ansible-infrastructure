@@ -1,3 +1,4 @@
+---
 - hosts: localhost
   connection: local
   gather_facts: False
@@ -9,79 +10,79 @@
 
     - name: Create vprofile VPC
       ec2_vpc_net:
-        name: "{{vpc_name}}"
-        cidr_block: "{{vpcCidr}}"
-        region: "{{region}}"
+        name: "{{ vpc_name }}"
+        cidr_block: "{{ vpcCidr }}"
+        region: "{{ region }}"
         dns_support: yes
         dns_hostnames: yes
         tenancy: default
-        state: "{{state}}"
+        state: "{{ state }}"
       register: vpcout
 
-    - name: create Public Subnet 1 in Zone1
+    - name: Create Public Subnet 1 in Zone1
       ec2_vpc_subnet:
-        vpc_id: "{{vpcout.vpc.id}}"
+        vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone1 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PubSub1Cidr }}"
         map_public: yes
         resource_tags:
           Name: vprofile-pubsub1
       register: pubsub1_out
 
-    - name: create Public subnet 2 in zone2
+    - name: Create Public Subnet 2 in Zone2
       ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone2 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PubSub2Cidr }}"
         map_public: yes
         resource_tags:
           Name: vprofile_pubsub2
       register: pubsub2_out
 
-    - name: create Public subnet 3 in zone3
+    - name: Create Public Subnet 3 in Zone3
       ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone3 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PubSub3Cidr }}"
         map_public: yes
         resource_tags:
           Name: vprofile_pubsub3
       register: pubsub3_out
 
-    - name: create Private Subnet 1 in Zone1
+    - name: Create Private Subnet 1 in Zone1
       ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone1 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PrivSub1Cidr }}"
         resource_tags:
           Name: vprofile_privsub1
       register: privsub1_out
 
-    - name: create Private subnet 2 in zone2
+    - name: Create Private Subnet 2 in Zone2
       ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone2 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PrivSub2Cidr }}"
         resource_tags:
           Name: vprofile_privsub2
       register: privsub2_out
 
-    - name: create Private subnet 3 in zone3
+    - name: Create Private Subnet 3 in Zone3
       ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         az: "{{ zone3 }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         cidr: "{{ PrivSub3Cidr }}"
         resource_tags:
           Name: vprofile_privsub3
@@ -91,29 +92,29 @@
       ec2_vpc_igw:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        state: "{{state}}"
+        state: "{{ state }}"
         resource_tags:
           Name: vprofile_IGW
       register: igw_out
 
     - name: Set up public subnet route table
       ec2_vpc_route_table:
-        vpc_id: "{{vpcout.vpc.id}}"
+        vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         tags:
           Name: VProfile-PubRT
         subnets:
-          - "{{pubsub1_out.subnet.id}}"
-          - "{{pubsub2_out.subnet.id}}"
-          - "{{pubsub3_out.subnet.id}}"
+          - "{{ pubsub1_out.subnet.id }}"
+          - "{{ pubsub2_out.subnet.id }}"
+          - "{{ pubsub3_out.subnet.id }}"
         routes:
           - dest: 0.0.0.0/0
-            gateway_id: "{{igw_out.gateway_id}}"
+            gateway_id: "{{ igw_out.gateway_id }}"
       register: pubRT_out
 
-    - name: Create new nat gateway and allocate new EIP if a nat gateway does not yet exist in the subnet.
+    - name: Create new NAT gateway and allocate new EIP if a NAT gateway does not yet exist in the subnet.
       ec2_vpc_nat_gateway:
-        state: "{{state}}"
+        state: "{{ state }}"
         subnet_id: "{{ pubsub1_out.subnet.id }}"
         wait: yes
         region: "{{ region }}"
@@ -122,7 +123,7 @@
 
     - name: Set up Private subnet route table
       ec2_vpc_route_table:
-        vpc_id: "{{vpcout.vpc.id}}"
+        vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         tags:
           Name: Vprofile_PrivRT
@@ -135,8 +136,9 @@
             gateway_id: "{{ NATGW_out.nat_gateway_id }}"
       register: privRT_out
 
-    - debug:
-        var: "{{item}}"
+    - name: Debug Information
+      debug:
+        var: item
       loop:
         - vpcout.vpc.id
         - pubsub1_out.subnet.id
@@ -150,24 +152,36 @@
         - NATGW_out.nat_gateway_id
         - privRT_out.route_table.id
 
-    - set_fact:
-         vpcid: "{{vpcout.vpc.id}}"
-         pubsub1id: "{{ pubsub1_out.subnet.id }}"
-         pubsub2id: "{{ pubsub2_out.subnet.id }}"
-         pubsub3id: "{{ pubsub3_out.subnet.id }}"
-         privsub1id: "{{ privsub1_out.subnet.id }}"
-         privsub2id: "{{ privsub2_out.subnet.id }}"
-         privsub3id: "{{ privsub3_out.subnet.id }}"
-         igwid: "{{ igw_out.gateway_id }}"
-         pubRTid: "{{ pubRT_out.route_table.id }}"
-         NATGWid: "{{ NATGW_out.nat_gateway_id }}"
-         privRTid: "{{ privRT_out.route_table.id }}"
-         cacheable: yes
+    - name: Set facts
+      set_fact:
+        vpcid: "{{ vpcout.vpc.id }}"
+        pubsub1id: "{{ pubsub1_out.subnet.id }}"
+        pubsub2id: "{{ pubsub2_out.subnet.id }}"
+        pubsub3id: "{{ pubsub3_out.subnet.id }}"
+        privsub1id: "{{ privsub1_out.subnet.id }}"
+        privsub2id: "{{ privsub2_out.subnet.id }}"
+        privsub3id: "{{ privsub3_out.subnet.id }}"
+        igwid: "{{ igw_out.gateway_id }}"
+        pubRTid: "{{ pubRT_out.route_table.id }}"
+        NATGWid: "{{ NATGW_out.nat_gateway_id }}"
+        privRTid: "{{ privRT_out.route_table.id }}"
+        cacheable: yes
 
-    - name: Create variables file for vpc output
+    - name: Create variables file for VPC output
       copy:
-         content: "vpcid: {{ vpcout.vpc.id }}\npubsub1id: {{ pubsub1_out.subnet.id }}\npubsub2id: {{ pubsub2_out.subnet.id }}\npubsub3id: {{ pubsub3_out.subnet.id }}\nprivsub1id: {{ privsub1_out.subnet.id }}\nprivsub2id: {{ privsub2_out.subnet.id }}\nprivsub3id: {{ privsub3_out.subnet.id }}\nigwid: {{ igw_out.gateway_id }}\npubRTid: {{ pubRT_out.route_table.id }}\nNATGWid: {{ NATGW_out.nat_gateway_id }}\nprivRTid: {{ privRT_out.route_table.id }}\n"
-         dest: vars/output_vars
+        content: |
+          vpcid: {{ vpcout.vpc.id }}
+          pubsub1id: {{ pubsub1_out.subnet.id }}
+          pubsub2id: {{ pubsub2_out.subnet.id }}
+          pubsub3id: {{ pubsub3_out.subnet.id }}
+          privsub1id: {{ privsub1_out.subnet.id }}
+          privsub2id: {{ privsub2_out.subnet.id }}
+          privsub3id: {{ privsub3_out.subnet.id }}
+          igwid: {{ igw_out.gateway_id }}
+          pubRTid: {{ pubRT_out.route_table.id }}
+          NATGWid: {{ NATGW_out.nat_gateway_id }}
+          privRTid: {{ privRT_out.route_table.id }}
+        dest: vars/output_vars
 
     - name: Create security group for RDS
       ec2_group:
@@ -247,7 +261,7 @@
       register: elb_out
 
     - name: Create S3 bucket for backup
-      aws_s3_bucket:
+      community.aws.s3_bucket:
         name: "vprofile-backup-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
         state: present
         region: "{{ region }}"
@@ -266,5 +280,6 @@
         src: "{{ rds_snapshot_out.snapshot.DBSnapshotArn }}"
       register: s3_upload_out
 
-    - debug:
+    - name: Debug
+      debug:
         msg: "RDS instance and read replica created, ELB and S3 bucket configured. VPC and subnets setup complete."
