@@ -36,3 +36,8 @@ sg_tag: "vprofile-sg"
 
 # S3 bucket name
 s3_bucket_name: "ansible-infrastructure-backup-bucket"
+
+
+# RDS Setup
+rds_subnet_group:
+  name: my-rds-subnet-group
