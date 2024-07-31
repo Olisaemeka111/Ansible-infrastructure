@@ -20,3 +20,16 @@ zone2: us-east-2b
 zone3: us-east-2c
 
 state: present
+
+# RDS settings
+rds_instance_identifier: "vprofile-rds"
+rds_master_username: "admin"
+rds_master_password: "Obaidemili123!"
+rds_db_name: "vprofiledb"
+secondary_region: "us-east-1"  # Secondary region for read replica
+
+# ELB settings
+elb_name: "vprofile-elb"
+
+# Tag for security groups
+sg_tag: "vprofile-sg"
