@@ -3,102 +3,103 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/vpc_setup
+    - vars/Vpc_setup
+
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/vpc_setup
+      include_vars: vars/Vpc_setup
 
     - name: Create vprofile VPC
-      community.aws.ec2_vpc_net:
+      amazon.aws.ec2_vpc_net:
         name: "{{ vpc_name }}"
         cidr_block: "{{ vpcCidr }}"
         region: "{{ region }}"
-        dns_support: yes
-        dns_hostnames: yes
-        tenancy: default
-        state: "{{ state }}"
+        enable_dns_support: true
+        enable_dns_hostnames: true
+        instance_tenancy: default
+        state: present
       register: vpcout
 
     - name: Create Public Subnet 1 in Zone1
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone1 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone1 }}"
         cidr: "{{ PubSub1Cidr }}"
-        map_public: yes
-        resource_tags:
+        map_public: true
+        state: present
+        tags:
           Name: vprofile-pubsub1
       register: pubsub1_out
 
     - name: Create Public Subnet 2 in Zone2
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone2 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone2 }}"
         cidr: "{{ PubSub2Cidr }}"
-        map_public: yes
-        resource_tags:
+        map_public: true
+        state: present
+        tags:
           Name: vprofile_pubsub2
       register: pubsub2_out
 
     - name: Create Public Subnet 3 in Zone3
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone3 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone3 }}"
         cidr: "{{ PubSub3Cidr }}"
-        map_public: yes
-        resource_tags:
+        map_public: true
+        state: present
+        tags:
           Name: vprofile_pubsub3
       register: pubsub3_out
 
     - name: Create Private Subnet 1 in Zone1
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone1 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone1 }}"
         cidr: "{{ PrivSub1Cidr }}"
-        resource_tags:
+        state: present
+        tags:
           Name: vprofile_privsub1
       register: privsub1_out
 
     - name: Create Private Subnet 2 in Zone2
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone2 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone2 }}"
         cidr: "{{ PrivSub2Cidr }}"
-        resource_tags:
+        state: present
+        tags:
           Name: vprofile_privsub2
       register: privsub2_out
 
     - name: Create Private Subnet 3 in Zone3
-      community.aws.ec2_vpc_subnet:
+      amazon.aws.ec2_vpc_subnet:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        az: "{{ zone3 }}"
-        state: "{{ state }}"
+        availability_zone: "{{ zone3 }}"
         cidr: "{{ PrivSub3Cidr }}"
-        resource_tags:
+        state: present
+        tags:
           Name: vprofile_privsub3
       register: privsub3_out
 
     - name: Internet Gateway Setup
-      community.aws.ec2_vpc_igw:
+      amazon.aws.ec2_vpc_igw:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
-        state: "{{ state }}"
-        resource_tags:
+        state: present
+        tags:
           Name: vprofile_IGW
       register: igw_out
 
     - name: Set up public subnet route table
-      community.aws.ec2_vpc_route_table:
+      amazon.aws.ec2_vpc_route_table:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         tags:
@@ -108,21 +109,20 @@
           - "{{ pubsub2_out.subnet.id }}"
           - "{{ pubsub3_out.subnet.id }}"
         routes:
-          - dest: 0.0.0.0/0
+          - destination_cidr_block: 0.0.0.0/0
             gateway_id: "{{ igw_out.gateway_id }}"
       register: pubRT_out
 
     - name: Create new NAT gateway and allocate new EIP if a NAT gateway does not yet exist in the subnet.
-      community.aws.ec2_vpc_nat_gateway:
-        state: "{{ state }}"
+      amazon.aws.ec2_vpc_nat_gateway:
         subnet_id: "{{ pubsub1_out.subnet.id }}"
-        wait: yes
+        state: present
         region: "{{ region }}"
-        if_exist_do_not_create: true
+        wait: true
       register: NATGW_out
 
     - name: Set up Private subnet route table
-      community.aws.ec2_vpc_route_table:
+      amazon.aws.ec2_vpc_route_table:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         tags:
@@ -132,8 +132,8 @@
           - "{{ privsub2_out.subnet.id }}"
           - "{{ privsub3_out.subnet.id }}"
         routes:
-          - dest: 0.0.0.0/0
-            gateway_id: "{{ NATGW_out.nat_gateway_id }}"
+          - destination_cidr_block: 0.0.0.0/0
+            nat_gateway_id: "{{ NATGW_out.nat_gateway_id }}"
       register: privRT_out
 
     - name: Debug Information
@@ -184,27 +184,29 @@
         dest: vars/output_vars
 
     - name: Create security group for RDS
-      community.aws.ec2_group:
+      amazon.aws.ec2_group:
         name: rds_sg
         description: Security group for RDS
         region: "{{ region }}"
         vpc_id: "{{ vpcout.vpc.id }}"
+        state: present
         tags:
           Name: "{{ sg_tag }}"
       register: rds_sg_out
 
     - name: Create security group for ELB
-      community.aws.ec2_group:
+      amazon.aws.ec2_group:
         name: elb_sg
         description: Security group for ELB
         region: "{{ region }}"
         vpc_id: "{{ vpcout.vpc.id }}"
+        state: present
         tags:
           Name: "{{ sg_tag }}"
       register: elb_sg_out
 
     - name: Create RDS Subnet Group
-      community.aws.rds_subnet_group:
+      amazon.aws.rds_subnet_group:
         name: "{{ rds_subnet_group }}"
         description: "Subnet group for RDS"
         subnets:
@@ -212,73 +214,17 @@
           - "{{ privsub2_out.subnet.id }}"
           - "{{ privsub3_out.subnet.id }}"
         region: "{{ region }}"
+        state: present
       register: rds_subnet_group_out
 
     - name: Create RDS instance
-      community.aws.rds_instance:
+      amazon.aws.rds_instance:
         db_instance_identifier: "{{ rds_instance_identifier }}"
         db_name: "{{ rds_db_name }}"
         master_username: "{{ rds_master_username }}"
         master_user_password: "{{ rds_master_password }}"
         db_instance_class: db.t2.micro
         engine: mysql
-        multi_az: yes
-        vpc_security_group_ids:
-          - "{{ rds_sg_out.group_id }}"
-        db_subnet_group_name: "{{ rds_subnet_group_out.subnet_group.name }}"
         allocated_storage: 20
         region: "{{ region }}"
         state: present
-      register: rds_out
-
-    - name: Create RDS read replica
-      community.aws.rds_instance:
-        db_instance_identifier: "{{ rds_instance_identifier }}-replica"
-        source_db_instance_identifier: "{{ rds_out.instance.id }}"
-        db_instance_class: db.t2.micro
-        engine: mysql
-        region: "{{ secondary_region }}"
-        vpc_security_group_ids:
-          - "{{ rds_sg_out.group_id }}"
-        state: present
-      register: rds_replica_out
-
-    - name: Create ELB
-      community.aws.elb_application_lb:
-        name: "{{ elb_name }}"
-        state: present
-        subnets:
-          - "{{ pubsub1_out.subnet.id }}"
-          - "{{ pubsub2_out.subnet.id }}"
-          - "{{ pubsub3_out.subnet.id }}"
-        security_groups:
-          - "{{ elb_sg_out.group_id }}"
-        listeners:
-          - protocol: http
-            port: 80
-            target_group_arn: "{{ target_group_arn }}"
-        region: "{{ region }}"
-      register: elb_out
-
-    - name: Create S3 bucket for backup
-      amazon.aws.s3_bucket:
-        name: "vprofile-backup-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-        state: present
-        region: "{{ region }}"
-
-    - name: Create RDS snapshot
-      community.aws.rds_snapshot:
-        db_instance_identifier: "{{ rds_instance_identifier }}"
-        db_snapshot_identifier: "snapshot-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-      register: rds_snapshot_out
-
-    - name: Upload RDS snapshot to S3
-      amazon.aws.s3:
-        bucket: "vprofile-backup-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-        object: "{{ rds_snapshot_out.snapshot.DBInstanceIdentifier }}-{{ rds_snapshot_out.snapshot.DBSnapshotIdentifier }}.snapshot"
-        src: "{{ rds_snapshot_out.snapshot.DBSnapshotArn }}"
-      register: s3_upload_out
-
-    - name: Debug
-      debug:
-        msg: "RDS instance and read replica created, ELB and S3 bucket configured. VPC and subnets setup complete."
