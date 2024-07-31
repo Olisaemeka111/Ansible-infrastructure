@@ -3,11 +3,11 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/vpc_setup
+    - vars/Vpc_setup
 
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/vpc_setup
+      include_vars: vars/Vpc_setup
 
     - name: Create vprofile VPC
       amazon.aws.ec2_vpc_net:
