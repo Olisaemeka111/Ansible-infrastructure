@@ -3,10 +3,10 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/Vpc_setup
+    - vars/vpc_setup.yml
   tasks:
     - name: Import VPC Variables
-      include_vars: vars/Vpc_setup
+      include_vars: vars/vpc_setup.yml
 
     - name: Delete RDS read replica
       amazon.aws.rds_instance:
@@ -33,7 +33,7 @@
       ignore_errors: yes
 
     - name: Delete ELB
-      amazon.aws.elb:
+      amazon.aws.elastic_load_balancing:
         name: "{{ elb_name }}"
         state: absent
         region: "{{ region }}"
