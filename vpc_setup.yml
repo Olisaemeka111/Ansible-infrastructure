@@ -146,6 +146,10 @@
           Name: "{{ s3_bucket_name }}"
       register: s3_bucket_out
 
+    - name: Debug S3 Bucket Output
+      debug:
+        var: s3_bucket_out
+
     - name: Debug Information
       debug:
         var: item
@@ -161,7 +165,7 @@
         - pubRT_out.route_table.id
         - NATGW_out.nat_gateway_id
         - privRT_out.route_table.id
-        - s3_bucket_out.bucket.id
+        - s3_bucket_out.bucket  # Adjusted based on debug output
 
     - name: Set facts
       set_fact:
@@ -176,7 +180,7 @@
         pubRTid: "{{ pubRT_out.route_table.id }}"
         NATGWid: "{{ NATGW_out.nat_gateway_id }}"
         privRTid: "{{ privRT_out.route_table.id }}"
-        s3_bucket_id: "{{ s3_bucket_out.bucket.id }}"
+        s3_bucket_id: "{{ s3_bucket_out.bucket }}"  # Adjusted based on debug output
         cacheable: yes
 
     - name: Create variables file for VPC and S3 output
@@ -193,7 +197,7 @@
           pubRTid: {{ pubRT_out.route_table.id }}
           NATGWid: {{ NATGW_out.nat_gateway_id }}
           privRTid: {{ privRT_out.route_table.id }}
-          s3_bucket_id: {{ s3_bucket_out.bucket.id }}
+          s3_bucket_id: {{ s3_bucket_out.bucket }}  # Adjusted based on debug output
         dest: vars/output_vars
 
     - name: Create security group for RDS
