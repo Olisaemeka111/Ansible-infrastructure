@@ -230,7 +230,7 @@
 
     - name: Create RDS Subnet Group
       amazon.aws.rds_subnet_group:
-        name: "{{ rds_subnet_group }}"
+        name: "{{ rds_subnet_group.name }}"
         description: "Subnet group for RDS"
         subnets:
           - "{{ privsub1_out.subnet.id }}"
