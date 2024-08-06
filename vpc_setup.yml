@@ -249,5 +249,10 @@
         db_instance_class: db.t2.micro
         engine: mysql
         allocated_storage: 20
+        db_subnet_group_name: "{{ rds_subnet_group.name }}"
         region: "{{ region }}"
         state: present
+
+    - name: Debug RDS Instance
+      debug:
+        var: rds_instance_out
