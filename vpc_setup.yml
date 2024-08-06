@@ -1,3 +1,4 @@
+---
 - hosts: localhost
   connection: local
   gather_facts: False
@@ -40,7 +41,7 @@
         map_public: true
         state: present
         tags:
-          Name: vprofile_pubsub2
+          Name: vprofile-pubsub2
       register: pubsub2_out
 
     - name: Create Public Subnet 3 in Zone3
@@ -52,7 +53,7 @@
         map_public: true
         state: present
         tags:
-          Name: vprofile_pubsub3
+          Name: vprofile-pubsub3
       register: pubsub3_out
 
     - name: Create Private Subnet 1 in Zone1
@@ -63,7 +64,7 @@
         cidr: "{{ PrivSub1Cidr }}"
         state: present
         tags:
-          Name: vprofile_privsub1
+          Name: vprofile-privsub1
       register: privsub1_out
 
     - name: Create Private Subnet 2 in Zone2
@@ -74,7 +75,7 @@
         cidr: "{{ PrivSub2Cidr }}"
         state: present
         tags:
-          Name: vprofile_privsub2
+          Name: vprofile-privsub2
       register: privsub2_out
 
     - name: Create Private Subnet 3 in Zone3
@@ -85,16 +86,16 @@
         cidr: "{{ PrivSub3Cidr }}"
         state: present
         tags:
-          Name: vprofile_privsub3
+          Name: vprofile-privsub3
       register: privsub3_out
 
-    - name: Internet Gateway Setup
+    - name: Create Internet Gateway
       amazon.aws.ec2_vpc_igw:
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         state: present
         tags:
-          Name: vprofile_IGW
+          Name: vprofile-IGW
       register: igw_out
 
     - name: Set up public subnet route table
@@ -110,14 +111,20 @@
         routes:
           - dest: 0.0.0.0/0
             gateway_id: "{{ igw_out.gateway_id }}"
-          - dest: ::/0
+          - dest: "::/0"
             gateway_id: "{{ igw_out.gateway_id }}"
       register: pubRT_out
 
-    - name: Create new NAT gateway and allocate new EIP if a NAT gateway does not yet exist in the subnet.
+    - name: Allocate EIP for NAT Gateway
+      amazon.aws.ec2_eip:
+        region: "{{ region }}"
+        state: present
+      register: eip_out
+
+    - name: Create NAT Gateway
       amazon.aws.ec2_vpc_nat_gateway:
         subnet_id: "{{ pubsub1_out.subnet.id }}"
-        state: present
+        allocation_id: "{{ eip_out.allocation_id }}"
         region: "{{ region }}"
         wait: true
       register: NATGW_out
@@ -127,7 +134,7 @@
         vpc_id: "{{ vpcout.vpc.id }}"
         region: "{{ region }}"
         tags:
-          Name: Vprofile_PrivRT
+          Name: VProfile-PrivRT
         subnets:
           - "{{ privsub1_out.subnet.id }}"
           - "{{ privsub2_out.subnet.id }}"
@@ -152,20 +159,19 @@
 
     - name: Debug Information
       debug:
-        var: item
-      loop:
-        - vpcout.vpc.id
-        - pubsub1_out.subnet.id
-        - pubsub2_out.subnet.id
-        - pubsub3_out.subnet.id
-        - privsub1_out.subnet.id
-        - privsub2_out.subnet.id
-        - privsub3_out.subnet.id
-        - igw_out.gateway_id
-        - pubRT_out.route_table.id
-        - NATGW_out.nat_gateway_id
-        - privRT_out.route_table.id
-        - s3_bucket_out  # Use the entire object to check for correct attributes
+        msg: |
+          VPC ID: {{ vpcout.vpc.id }}
+          Public Subnet 1 ID: {{ pubsub1_out.subnet.id }}
+          Public Subnet 2 ID: {{ pubsub2_out.subnet.id }}
+          Public Subnet 3 ID: {{ pubsub3_out.subnet.id }}
+          Private Subnet 1 ID: {{ privsub1_out.subnet.id }}
+          Private Subnet 2 ID: {{ privsub2_out.subnet.id }}
+          Private Subnet 3 ID: {{ privsub3_out.subnet.id }}
+          IGW ID: {{ igw_out.gateway_id }}
+          Public RT ID: {{ pubRT_out.route_table.id }}
+          NAT Gateway ID: {{ NATGW_out.nat_gateway_id }}
+          Private RT ID: {{ privRT_out.route_table.id }}
+          S3 Bucket: {{ s3_bucket_out.name }}
 
     - name: Set facts
       set_fact:
