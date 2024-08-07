@@ -2,83 +2,145 @@
   connection: local
   gather_facts: False
   vars_files:
-    - vars/Vpc_setup  # Ensure this file has the necessary variables or paths to your outputs
+    - vars/output_vars.yml  # Ensure this file contains the variables set during creation
 
   tasks:
-    - name: Import VPC Variables
-      include_vars: vars/Vpc_setup
-
-    - name: Delete S3 Bucket
-      amazon.aws.s3_bucket:
-        name: "{{ s3_bucket_name }}"
+    - name: Delete RDS instance
+      amazon.aws.rds_instance:
+        db_instance_identifier: "{{ rds_instance_identifier }}"
+        region: "{{ region }}"
         state: absent
+      register: delete_rds_instance_out
+
+    - name: Delete RDS Subnet Group
+      amazon.aws.rds_subnet_group:
+        name: "{{ rds_subnet_group.name }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_rds_subnet_group_out
+
+    - name: Delete security group for RDS
+      amazon.aws.ec2_group:
+        name: rds_sg
+        region: "{{ region }}"
+        state: absent
+      register: delete_rds_sg_out
+
+    - name: Delete security group for ELB
+      amazon.aws.ec2_group:
+        name: elb_sg
+        region: "{{ region }}"
+        state: absent
+      register: delete_elb_sg_out
 
     - name: Delete NAT Gateway
       amazon.aws.ec2_vpc_nat_gateway:
-        nat_gateway_id: "{{ NATGW_out.nat_gateway_id }}"
+        nat_gateway_id: "{{ NATGWid }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_nat_gw_out
+
+    - name: Release EIP for NAT Gateway
+      amazon.aws.ec2_eip:
+        allocation_id: "{{ eip_out.allocation_id }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_eip_out
+
+    - name: Delete Private subnet route table
+      amazon.aws.ec2_vpc_route_table:
+        route_table_id: "{{ privRTid }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_private_rt_out
+
+    - name: Delete Public subnet route table
+      amazon.aws.ec2_vpc_route_table:
+        route_table_id: "{{ pubRTid }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_public_rt_out
 
     - name: Delete Internet Gateway
       amazon.aws.ec2_vpc_igw:
-        vpc_id: "{{ vpcout.vpc.id }}"
+        igw_id: "{{ igwid }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
-
-    - name: Delete Public Subnet 1 in Zone1
-      amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ pubsub1_out.subnet.id }}"
-        region: "{{ region }}"
-        state: absent
-      ignore_errors: yes
-
-    - name: Delete Public Subnet 2 in Zone2
-      amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ pubsub2_out.subnet.id }}"
-        region: "{{ region }}"
-        state: absent
-      ignore_errors: yes
-
-    - name: Delete Public Subnet 3 in Zone3
-      amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ pubsub3_out.subnet.id }}"
-        region: "{{ region }}"
-        state: absent
-      ignore_errors: yes
+      register: delete_igw_out
 
     - name: Delete Private Subnet 1 in Zone1
       amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ privsub1_out.subnet.id }}"
+        subnet_id: "{{ privsub1id }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_privsub1_out
 
     - name: Delete Private Subnet 2 in Zone2
       amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ privsub2_out.subnet.id }}"
+        subnet_id: "{{ privsub2id }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_privsub2_out
 
     - name: Delete Private Subnet 3 in Zone3
       amazon.aws.ec2_vpc_subnet:
-        subnet_id: "{{ privsub3_out.subnet.id }}"
+        subnet_id: "{{ privsub3id }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_privsub3_out
 
-    - name: Delete Route Tables
-      amazon.aws.ec2_vpc_route_table:
-        vpc_id: "{{ vpcout.vpc.id }}"
+    - name: Delete Public Subnet 1 in Zone1
+      amazon.aws.ec2_vpc_subnet:
+        subnet_id: "{{ pubsub1id }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_pubsub1_out
+
+    - name: Delete Public Subnet 2 in Zone2
+      amazon.aws.ec2_vpc_subnet:
+        subnet_id: "{{ pubsub2id }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_pubsub2_out
+
+    - name: Delete Public Subnet 3 in Zone3
+      amazon.aws.ec2_vpc_subnet:
+        subnet_id: "{{ pubsub3id }}"
+        region: "{{ region }}"
+        state: absent
+      register: delete_pubsub3_out
 
     - name: Delete VPC
-      amazon.aws.ec2_vpc_net:
-        vpc_id: "{{ vpcout.vpc.id }}"
+      amazon.aws.vpc:
+        vpc_id: "{{ vpcid }}"
         region: "{{ region }}"
         state: absent
-      ignore_errors: yes
+      register: delete_vpc_out
+
+    - name: Delete S3 Bucket
+      amazon.aws.s3_bucket:
+        name: "{{ s3_bucket_id }}"
+        state: absent
+        force: true
+      register: delete_s3_bucket_out
+
+    - name: Debug deletion output
+      debug:
+        msg: |
+          Deleted RDS Instance: {{ delete_rds_instance_out }}
+          Deleted RDS Subnet Group: {{ delete_rds_subnet_group_out }}
+          Deleted RDS Security Group: {{ delete_rds_sg_out }}
+          Deleted ELB Security Group: {{ delete_elb_sg_out }}
+          Deleted NAT Gateway: {{ delete_nat_gw_out }}
+          Released EIP: {{ delete_eip_out }}
+          Deleted Private Route Table: {{ delete_private_rt_out }}
+          Deleted Public Route Table: {{ delete_public_rt_out }}
+          Deleted Internet Gateway: {{ delete_igw_out }}
+          Deleted Private Subnet 1: {{ delete_privsub1_out }}
+          Deleted Private Subnet 2: {{ delete_privsub2_out }}
+          Deleted Private Subnet 3: {{ delete_privsub3_out }}
+          Deleted Public Subnet 1: {{ delete_pubsub1_out }}
+          Deleted Public Subnet 2: {{ delete_pubsub2_out }}
+          Deleted Public Subnet 3: {{ delete_pubsub3_out }}
+          Deleted VPC: {{ delete_vpc_out }}
+          Deleted S3 Bucket: {{ delete_s3_bucket_out }}
