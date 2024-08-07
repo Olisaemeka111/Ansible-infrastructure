@@ -1,10 +1,12 @@
 - hosts: localhost
   connection: local
   gather_facts: False
-  vars_files:
-    - vars/Vpc_setup  # Ensure this file contains the variables set during creation
 
   tasks:
+    - name: Include variables from vpc_setup.yml
+      include_vars:
+        file: vars/Vpc_setup
+
     - name: Delete RDS instance
       amazon.aws.rds_instance:
         db_instance_identifier: "{{ rds_instance_identifier }}"
@@ -111,7 +113,7 @@
       register: delete_pubsub3_out
 
     - name: Delete VPC
-      amazon.aws.vpc:
+      amazon.aws.ec2_vpc_net:
         vpc_id: "{{ vpcid }}"
         region: "{{ region }}"
         state: absent
