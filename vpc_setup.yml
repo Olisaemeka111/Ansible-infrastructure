@@ -248,7 +248,7 @@
         master_user_password: "{{ rds_master_password }}"
         db_instance_class: db.t3.micro  # Updated instance class
         engine: mysql
-        engine_version: "5.7.34"
+        engine_version: "5.7.44-rds.20240408"
         allocated_storage: 20
         db_subnet_group_name: "{{ rds_subnet_group.name }}"
         region: "{{ region }}"
