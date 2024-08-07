@@ -45,19 +45,41 @@
       set_fact:
         NATGWid: "{{ nat_gateway_info.nat_gateways[0].nat_gateway_id }}"
 
+    - name: Debug NAT Gateway information
+      debug:
+        var: nat_gateway_info
+
     - name: Delete NAT Gateway
       amazon.aws.ec2_vpc_nat_gateway:
-        nat_gateway_id: "{{ NATGWid }}"
+        nat_gateway_id: "{{ item.nat_gateway_id }}"
         region: "{{ region }}"
         state: absent
+      loop: "{{ nat_gateway_info.nat_gateways }}"
       register: delete_nat_gw_out
 
-    - name: Release EIP for NAT Gateway
+    - name: Debug deletion output
+      debug:
+        var: delete_nat_gw_out
+
+    - name: Describe all EIPs
+      shell: aws ec2 describe-addresses --region "{{ region }}" --query "Addresses[].AllocationId"
+      register: eips_info
+
+    - name: Debug EIP information
+      debug:
+        var: eips_info.stdout_lines
+
+    - name: Release EIPs for all NAT Gateways
       amazon.aws.ec2_eip:
-        allocation_id: "{{ eip_out.allocation_id }}"
+        allocation_id: "{{ item.nat_gateway_address.allocation_id }}"
         region: "{{ region }}"
         state: absent
+      loop: "{{ nat_gateway_info.nat_gateways }}"
       register: delete_eip_out
+
+    - name: Debug EIP release output
+      debug:
+        var: delete_eip_out
 
     - name: Delete Private subnet route table
       amazon.aws.ec2_vpc_route_table:
